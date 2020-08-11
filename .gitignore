@@ -1,0 +1,8 @@
+# Python
+__pycache__
+
+# Data
+data
+
+# Jupyter
+.ipynb_checkpoints

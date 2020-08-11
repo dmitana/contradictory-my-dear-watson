@@ -1,0 +1,16 @@
+version: '3.7'
+
+services:
+  pytorch:
+    container_name: contradictory_my_dear_watson
+    build:
+      context: ./
+    volumes:
+      - ./:/app
+      - $HOME/.config/nvim:/root/.nvim
+      - $HOME/.config/coc:/root/.coc
+    ports:
+      - 8000:8000
+    device_requests:
+      - capabilities:
+        - "gpu"
