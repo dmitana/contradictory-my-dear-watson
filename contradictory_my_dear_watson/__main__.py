@@ -1,4 +1,4 @@
-from contradictory_my_dear_watson.cli.arguments import create_argument_parser
+from contradictory_my_dear_watson.cli.parser import create_argument_parser
 
 
 if __name__ == '__main__':
