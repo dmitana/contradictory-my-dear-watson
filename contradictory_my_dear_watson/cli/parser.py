@@ -88,6 +88,20 @@ def create_train_subparser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
+    # Optional arguments
+    parser_train.add_argument(
+        '--num-workers',
+        type=int,
+        default=0,
+        help='How many subprocesses to use for data loading. `0` means '
+             'that the data will be loaded in the main process.'
+    )
+    parser_train.add_argument(
+        '--print-summary',
+        action='store_true',
+        help='Whether to print model summary.'
+    )
+
     # Required named arguments
     parser_required_named = parser_train.add_argument_group(
         'required named arguments'
@@ -148,18 +162,6 @@ def create_train_subparser(
         type=int,
         default=1,
         help='Number of training epochs.'
-    )
-    parser_hparams.add_argument(
-        '--num-workers',
-        type=int,
-        default=0,
-        help='How many subprocesses to use for data loading. `0` means '
-             'that the data will be loaded in the main process.'
-    )
-    parser_hparams.add_argument(
-        '--print-summary',
-        action='store_true',
-        help='Whether to print model summary.'
     )
 
     # Add execution function
