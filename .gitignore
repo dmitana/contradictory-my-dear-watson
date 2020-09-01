@@ -3,6 +3,7 @@ __pycache__
 
 # Data
 data
+.vector_cache
 
 # Jupyter
 .ipynb_checkpoints
