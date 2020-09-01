@@ -130,11 +130,11 @@ def create_train_subparser(
         help='Tokenizer language to be used by PyTorch `get_tokenizer`'
              'function to get instance of `Tokenizer`.'
     )
-    # TODO: add choices
     parser_hparams.add_argument(
         '--vectors',
         type=str,
         default='fasttext.simple.300d',
+        choices=['fasttext.simple.300d', 'fasttext.en.300d'],
         help='Vectors name to be loaded by PyTorch `load_vectors` method.'
     )
     parser_hparams.add_argument(
