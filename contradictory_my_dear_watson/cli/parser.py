@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from contradictory_my_dear_watson.cli.evaluate import evaluate
 from contradictory_my_dear_watson.cli.train import train
+from contradictory_my_dear_watson.models import BiLSTMModel
 
 
 def arg_map(**mapping: Dict[Any, Any]) -> Callable[[Any], Any]:
@@ -50,7 +51,6 @@ def create_argument_parser() -> argparse.ArgumentParser:
     # Optional arguments
     parent_parser.add_argument(
         '--logging-level',
-        required=False,
         type=arg_map(**logging_level_mapping),
         metavar=f'{{{",".join(key for key in logging_level_mapping.keys())}}}',
         default='info',
@@ -114,9 +114,16 @@ def create_train_subparser(
 
     )
 
-    # Hyperparameters agruments
+    # Hyperparameters
     parser_hparams = parser_train.add_argument_group(
         'hyperparameters'
+    )
+    parser_hparams.add_argument(
+        '--model',
+        type=arg_map(**model_mapping),
+        metavar=f'{{{",".join(key for key in model_mapping.keys())}}}',
+        default='baseline',
+        help='Model to be trained.'
     )
     parser_hparams.add_argument(
         '--lstm-hidden-size',
@@ -194,4 +201,8 @@ logging_level_mapping = {
     'warning': logging.WARNING,
     'info': logging.INFO,
     'debug': logging.DEBUG
+}
+
+model_mapping = {
+    'baseline': BiLSTMModel
 }
