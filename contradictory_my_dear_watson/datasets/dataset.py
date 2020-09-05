@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import logging
 import os
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -10,6 +11,7 @@ class Dataset(ABC):
     """
     Dataset abstract class.
 
+    :param label_map: dict, map labels to numbers.
     :param self.data_path: str, path to the data.
     :param self.train_size: int, size of train dataset in percentage.
     :param self.dev_size: int, size of development dataset in percentage.
@@ -18,6 +20,12 @@ class Dataset(ABC):
         for sanity check with `--sanity-size` elements. Ignore
         `train_size`, `dev_size` and `test_size` if set.'
     """
+
+    label_map = {
+        'entailment': 0,
+        'neutral': 1,
+        'contradiction': 2
+    }
 
     def __init__(
         self,
@@ -126,7 +134,16 @@ class Dataset(ABC):
         return True
 
     @abstractmethod
-    def transform(self, data: pd.DataFrame) -> pd.DataFrame:  # noqa: U100
+    def read_data(self) -> Any:
+        """
+        Read data specific method.
+
+        :return: read data.
+        """
+        pass
+
+    @abstractmethod
+    def transform(self, data: Any) -> pd.DataFrame:  # noqa: U100
         """
         Dataset specific transformation method.
 
@@ -139,11 +156,10 @@ class Dataset(ABC):
     def __call__(self) -> None:
         """Create datasets."""
         # Read data
-        dataset = pd.read_csv(self.data_path)
-        assert isinstance(dataset, pd.DataFrame)
+        data = self.read_data()
 
         # Transform data
-        dataset = self.transform(dataset)
+        dataset = self.transform(data)
 
         # TODO: add sanity check dataset
 

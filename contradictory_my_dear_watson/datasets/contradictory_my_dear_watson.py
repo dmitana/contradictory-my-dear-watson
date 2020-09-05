@@ -8,6 +8,18 @@ class ContradictoryMyDearWatsonDataset(Dataset):
 
     name = 'contradictory-my-dear-watson'
 
+    def read_data(self) -> pd.DataFrame:
+        """
+        Read data specific method.
+
+        Read CSV file to dataframe.
+
+        :return: read dataframe.
+        """
+        data = pd.read_csv(self.data_path)
+        assert isinstance(data, pd.DataFrame)
+        return data
+
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Dataset specific transformation method.
