@@ -28,6 +28,7 @@ class BiLSTMModel(nn.Module):
         embeddings: Optional[Tensor] = None,
         freeze_embeddings: bool = True,
         lstm_hidden_size: int = 128,
+        dropout_prob: float = 0.5,
         num_classes: int = 3,
     ):
         """
@@ -43,6 +44,7 @@ class BiLSTMModel(nn.Module):
             `embedding.weight.requires_grad = False`.
         :param lstm_hidden_size: the number of features in the hidden
             state `h`.
+        :param dropout_prob: probability of an element to be zeroed.
         :param num_classes: number of classes to be predicted.
         """
         super(BiLSTMModel, self).__init__()
@@ -63,6 +65,7 @@ class BiLSTMModel(nn.Module):
             batch_first=True,
             bidirectional=True
         )
+        self.dropout = nn.Dropout(p=dropout_prob)
         self.fc = nn.Linear(8 * lstm_hidden_size, num_classes)
 
     def forward(
@@ -104,14 +107,17 @@ class BiLSTMModel(nn.Module):
 
         # Compute element-wise absolute difference and product between
         # premise and hypothesis
-        ph_abs_diff = torch.abs(premise_hn - hypothesis_hn)
-        ph_mul = torch.mul(premise_hn, hypothesis_hn)
+        ph_abs_diff = torch.abs(premise_hn - hypothesis_hn)  # type: ignore
+        ph_mul = torch.mul(premise_hn, hypothesis_hn)  # type: ignore
 
         # Create final feature vector
-        features = torch.cat(
+        features = torch.cat(  # type: ignore
             (premise_hn, hypothesis_hn, ph_abs_diff, ph_mul),
             1
         )
+
+        # Add dropout
+        features = self.dropout(features)
 
         # Classify using FC layer
         out = self.fc(features)

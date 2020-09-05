@@ -143,6 +143,12 @@ def create_train_subparser(
         help='Number of neurons in a LSTM layer.'
     )
     parser_hparams.add_argument(
+        '--dropout-prob',
+        type=float,
+        default=0.5,
+        help='Probability of an element to be zeroed.'
+    )
+    parser_hparams.add_argument(
         '--learning-rate',
         type=float,
         default=0.01,
