@@ -12,6 +12,19 @@ from contradictory_my_dear_watson.datasets import (
 from contradictory_my_dear_watson.models import BiLSTMModel
 
 
+class MyArgumentParser(argparse.ArgumentParser):
+    """Class representing custom argument parser."""
+
+    def convert_arg_line_to_args(self, arg_line: str) -> List[str]:
+        """
+        Convert argument line to arguments.
+
+        :param arg_line: argument line.
+        :return: arguments.
+        """
+        return arg_line.split()
+
+
 def arg_map(**mapping: Dict[Any, Any]) -> Callable[[Any], Any]:
     """
     Create function to map arguments using given `mapping`.
@@ -40,11 +53,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
     :return: argument parser.
     """
     # Create main parser
-    parser = argparse.ArgumentParser(
+    parser = MyArgumentParser(
         prog='contradictory-my-dear-watson',
         description='Program to solve the Contradictory, My Dear Watson '
                     'problem.',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        fromfile_prefix_chars='@'
     )
 
     # Create parent parser for shared arguments
