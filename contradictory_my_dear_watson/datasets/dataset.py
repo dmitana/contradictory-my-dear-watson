@@ -36,7 +36,7 @@ class Dataset(ABC):
         sanity_size: int = 0,
     ):
         """
-        Create a new instance of `ContradictoryMyDearWatsonDataset`.
+        Abstract constructor for `Dataset` sub-classes.
 
         :param data_path: path to the data.
         :param train_size: size of train dataset in percentage.
