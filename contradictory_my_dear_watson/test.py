@@ -3,6 +3,8 @@ from torch import nn
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
+from contradictory_my_dear_watson.metrics import Accuracy, AvgLoss
+
 
 def test_fn(
     model: nn.Module,
@@ -18,16 +20,14 @@ def test_fn(
     :param test_loader: data loader with test data.
     :param criterion: loss function.
     """
-    # Define default values
-    test_loss, correct, n_batchs = 0, 0, 0
-
     # Set eval mode
     model.eval()
 
+    acc = Accuracy()
+    avg_loss = AvgLoss()
+
     with torch.no_grad():
         for data in test_loader:
-            n_batchs += 1
-
             # Send data to device
             premise = data['premise'].to(device)
             hypothesis = data['hypothesis'].to(device)
@@ -36,17 +36,17 @@ def test_fn(
             # Run forward pass
             output = model(premise, hypothesis)
 
-            # Sum up batch loss
-            test_loss += criterion(output, label).item()
+            # Compute loss
+            loss = criterion(output, label)
 
-            # Get the index of the max log-probability
-            pred = output.argmax(dim=1, keepdim=True)
-            correct += pred.eq(label.view_as(pred)).sum().item()
+            # Update accuracy and loss
+            acc.update(output, label)
+            avg_loss.update(loss.item())
 
-    # Compute average loss
-    test_loss /= n_batchs
+    # Compute average accuracy and loss
+    acc_val = 100. * acc.compute().result
+    avg_loss_val = avg_loss.compute().result
 
-    # Compute accuracy
-    acc = 100. * correct / len(test_loader.dataset)
-
-    print(f'Test set - avg loss: {test_loss:.4f} - accuracy: {acc:.2f}')
+    print(
+        f'Test set - avg loss: {avg_loss_val:.4f} - accuracy: {acc_val:.2f} %'
+    )

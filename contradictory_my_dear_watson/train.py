@@ -7,6 +7,8 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from contradictory_my_dear_watson.metrics import Accuracy, AvgLoss
+
 
 def train_fn(
     model: nn.Module,
@@ -34,6 +36,9 @@ def train_fn(
     # Set train mode
     model.train()
 
+    acc = Accuracy()
+    avg_loss = AvgLoss()
+
     # Create progress bar
     loop = tqdm(train_loader)
     for data in loop:
@@ -57,7 +62,15 @@ def train_fn(
         # Update parameters
         optimizer.step()
 
+        # Update accuracy/loss and compute avg accuracy/loss
+        acc.update(output, label).compute()
+        avg_loss.update(loss.item()).compute()
+
         # Show progress
         elapsed_time = time.time() - start_time
         loop.set_description(f'Epoch {epoch}/{epochs}')
-        loop.set_postfix(loss=loss.item(), elapsed_time=f'{elapsed_time:.2f}s')
+        loop.set_postfix(
+            avg_loss=avg_loss.result,
+            avg_acc=100. * acc.result,
+            elapsed_time=f'{elapsed_time:.2f}s'
+        )
