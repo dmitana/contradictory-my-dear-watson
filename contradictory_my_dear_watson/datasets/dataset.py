@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import logging
 import os
-from typing import Any
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -153,39 +153,13 @@ class Dataset(ABC):
         """
         pass
 
-    def __call__(self) -> None:
-        """Create datasets."""
-        # Read data
-        data = self.read_data()
+    def write_datasets(self, datasets: Dict[str, pd.DataFrame]) -> None:
+        """
+        Write datasets to CSV files.
 
-        # Transform data
-        dataset = self.transform(data)
-
-        # TODO: add sanity check dataset
-
-        # Get random permutation
-        dataset_len = len(dataset)
-        np.random.seed(13)  # type: ignore
-        np.random.permutation(dataset_len)  # type: ignore
-
-        # Compute lengths of dataset
-        train_len = int(dataset_len * self.train_size / 100)
-        dev_len = train_len + int(dataset_len * self.dev_size / 100)
-
-        # Create datasets
-        train_dataset = dataset[:train_len]
-        dev_dataset = dataset[train_len:dev_len]
-        test_dataset = dataset[dev_len:]
-        assert isinstance(train_dataset, pd.DataFrame)
-        assert isinstance(dev_dataset, pd.DataFrame)
-        assert isinstance(test_dataset, pd.DataFrame)
-
-        datasets = {
-            'train': train_dataset,
-            'dev': dev_dataset,
-            'test': test_dataset
-        }
-
+        :param datasets: key-value pairs of datasets to be written. Key
+            is dataset name.
+        """
         dataset_path = f'data/processed/{self.name}'
         os.makedirs(dataset_path, exist_ok=True)
 
@@ -198,3 +172,44 @@ class Dataset(ABC):
                     f'samples saving to `{path}`'
                 )
                 value.to_csv(path, index=False)
+
+    def __call__(self) -> None:
+        """Create datasets."""
+        # Read data
+        data = self.read_data()
+
+        # Transform data
+        dataset = self.transform(data)
+
+        if self.sanity_size > 0:
+            sanity_dataset = dataset[:self.sanity_size]
+            assert isinstance(sanity_dataset, pd.DataFrame)
+            datasets = {f'sanity_{self.sanity_size}': sanity_dataset}
+        else:
+            # Get random permutation
+            dataset_len = len(dataset)
+            np.random.seed(13)  # type: ignore
+            np.random.permutation(dataset_len)  # type: ignore
+
+            # TODO: fix not using random permutation
+            # TODO: add option to shuffle using random permutation
+
+            # Compute lengths of dataset
+            train_len = int(dataset_len * self.train_size / 100)
+            dev_len = train_len + int(dataset_len * self.dev_size / 100)
+
+            # Create datasets
+            train_dataset = dataset[:train_len]
+            dev_dataset = dataset[train_len:dev_len]
+            test_dataset = dataset[dev_len:]
+            assert isinstance(train_dataset, pd.DataFrame)
+            assert isinstance(dev_dataset, pd.DataFrame)
+            assert isinstance(test_dataset, pd.DataFrame)
+
+            datasets = {
+                'train': train_dataset,
+                'dev': dev_dataset,
+                'test': test_dataset
+            }
+
+        self.write_datasets(datasets)  # type: ignore
