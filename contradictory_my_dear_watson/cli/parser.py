@@ -157,6 +157,13 @@ def create_train_subparser(
         help='Number of neurons in a LSTM layer.'
     )
     parser_hparams.add_argument(
+        '--max-pooling',
+        action='store_true',
+        help="whether max-pooling over LSTM's output is enabled or not. "
+             "If max-pooling is not enabled, only last LSTM's hidden "
+             'states are used.'
+    )
+    parser_hparams.add_argument(
         '--dropout-prob',
         type=float,
         default=0.5,

@@ -96,6 +96,7 @@ def train(args: Namespace) -> None:
         model = args.model(
             embeddings=vocab.vectors,
             lstm_hidden_size=args.lstm_hidden_size,
+            max_pooling=args.max_pooling,
             dropout_prob=args.dropout_prob
         )
     else:

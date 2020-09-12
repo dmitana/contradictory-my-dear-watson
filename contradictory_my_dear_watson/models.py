@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 from torch import nn, Tensor
-from torch.nn.utils.rnn import PackedSequence
+from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
 
 from contradictory_my_dear_watson.utils.model import \
     packed_sequence_element_wise_apply
@@ -18,7 +18,13 @@ class BiLSTMModel(nn.Module):
     :param self.embedding: torhc.nn.Embedding, pre-trained embedding
         layer.
     :param self.lstm: torch.nn.LSTM, Bi-LSTM layer.
-    :param self.fc: torch.nn.Linear, final classification layer.
+    :param self.max_pooling: bool, whether max-pooling over LSTM's output
+        is enabled or not. If max-pooling is not enabled, only last
+        LSTM's hidden states are used.
+    :param self.dropout: torch.nn.Dropout, dropout.
+    :param self.act: linear layers' activation.
+    :param self.fc: torch.nn.Linear, fully-connected layer.
+    :param self.fc_out: torch.nn.Linear, final classification layer.
     """
 
     def __init__(
@@ -28,8 +34,9 @@ class BiLSTMModel(nn.Module):
         embeddings: Optional[Tensor] = None,
         freeze_embeddings: bool = True,
         lstm_hidden_size: int = 128,
+        max_pooling: bool = False,
         dropout_prob: float = 0.5,
-        num_classes: int = 3,
+        num_classes: int = 3
     ):
         """
         Create a new instance of `BiLSTMModel`.
@@ -44,6 +51,9 @@ class BiLSTMModel(nn.Module):
             `embedding.weight.requires_grad = False`.
         :param lstm_hidden_size: the number of features in the hidden
             state `h`.
+        :param max_pooling: whether max-pooling over LSTM's output is
+            enabled or not. If max-pooling is not enabled, only last
+            LSTM's hidden states are used.
         :param dropout_prob: probability of an element to be zeroed.
         :param num_classes: number of classes to be predicted.
         """
@@ -58,6 +68,7 @@ class BiLSTMModel(nn.Module):
                 num_embeddings=num_embbedings,
                 embedding_dim=embedding_dim
             )
+
         self.lstm = nn.LSTM(
             input_size=embeddings.size(1),
             hidden_size=lstm_hidden_size,
@@ -65,8 +76,12 @@ class BiLSTMModel(nn.Module):
             batch_first=True,
             bidirectional=True
         )
+        self.max_pooling = max_pooling
+
         self.dropout = nn.Dropout(p=dropout_prob)
-        self.fc = nn.Linear(8 * lstm_hidden_size, num_classes)
+        self.act = nn.ReLU()
+        self.fc = nn.Linear(8 * lstm_hidden_size, 512)
+        self.fc_out = nn.Linear(512, num_classes)
 
     def forward(
         self,
@@ -92,34 +107,60 @@ class BiLSTMModel(nn.Module):
         )
 
         # Encode premise and hypothesis, use only the last hidden state
-        _, (premise_hn, _) = self.lstm(premise_emb)
-        _, (hypothesis_hn, _) = self.lstm(hypothesis_emb)
+        premise_out, (premise_hn, _) = self.lstm(premise_emb)
+        hypothesis_out, (hypothesis_hn, _) = self.lstm(hypothesis_emb)
 
-        # Concat forward and backward directions
-        premise_hn = premise_hn.transpose(1, 0).contiguous()
-        premise_hn = premise_hn.view(len(premise_hn), -1)
-        hypothesis_hn = hypothesis_hn.transpose(1, 0).contiguous()
-        hypothesis_hn = hypothesis_hn.view(len(hypothesis_hn), -1)
+        if self.max_pooling:
+            # Pad with big negative value because of max-pooling
+            premise_out, _ = pad_packed_sequence(
+                premise_out,
+                batch_first=True,
+                padding_value=-1e9
+            )
+            premise_out, _ = torch.max(premise_out, 1)  # type: ignore
 
-        # Restore ordering changed by sequence packing
-        premise_hn = premise_hn[premise.unsorted_indices]
-        hypothesis_hn = hypothesis_hn[hypothesis.unsorted_indices]
+            hypothesis_out, _ = pad_packed_sequence(
+                hypothesis_out,
+                batch_first=True,
+                padding_value=-1e9
+            )
+            hypothesis_out, _ = torch.max(hypothesis_out, 1)  # type: ignore
+
+            # Restore ordering changed by sequence packing
+            premise_out = premise_out[premise.unsorted_indices]
+            hypothesis_out = hypothesis_out[hypothesis.unsorted_indices]
+
+            premise_enc = premise_out
+            hypothesis_enc = hypothesis_out
+        else:
+            # Concat forward and backward directions
+            premise_hn = premise_hn.transpose(1, 0).contiguous()
+            premise_hn = premise_hn.view(len(premise_hn), -1)
+
+            hypothesis_hn = hypothesis_hn.transpose(1, 0).contiguous()
+            hypothesis_hn = hypothesis_hn.view(len(hypothesis_hn), -1)
+
+            # Restore ordering changed by sequence packing
+            premise_hn = premise_hn[premise.unsorted_indices]
+            hypothesis_hn = hypothesis_hn[hypothesis.unsorted_indices]
+
+            premise_enc = premise_hn
+            hypothesis_enc = hypothesis_hn
 
         # Compute element-wise absolute difference and product between
         # premise and hypothesis
-        ph_abs_diff = torch.abs(premise_hn - hypothesis_hn)  # type: ignore
-        ph_mul = torch.mul(premise_hn, hypothesis_hn)  # type: ignore
+        ph_abs_diff = torch.abs(premise_enc - hypothesis_enc)  # type: ignore
+        ph_mul = torch.mul(premise_enc, hypothesis_enc)  # type: ignore
 
         # Create final feature vector
         features = torch.cat(  # type: ignore
-            (premise_hn, hypothesis_hn, ph_abs_diff, ph_mul),
+            (premise_enc, hypothesis_enc, ph_abs_diff, ph_mul),
             1
         )
 
-        # Add dropout
+        # Classify using FC layers
+        features = self.act(self.fc(features))
         features = self.dropout(features)
-
-        # Classify using FC layer
-        out = self.fc(features)
+        out = self.fc_out(features)
 
         return out
