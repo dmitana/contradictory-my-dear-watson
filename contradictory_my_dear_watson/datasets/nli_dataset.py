@@ -2,7 +2,6 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 from torch.utils.data import Dataset
-from torchtext.vocab import Vocab
 from torchvision.transforms import Compose
 
 
@@ -12,8 +11,6 @@ class NLIDataset(Dataset):
 
     :param self.data: pandas.DataFrame, NLI data containing `premise`,
         `hypothesis` and `label`.
-    :param self.vocab: torchtext.vocab.Vocab, vocabulary created from
-        training data.
     :param self.transforms: torchvision.transforms.Compose, composition
         of transformations.
     """
@@ -21,7 +18,6 @@ class NLIDataset(Dataset):
     def __init__(
         self,
         data: pd.DataFrame,
-        vocab: Vocab,
         transforms: Optional[Compose] = None
     ):
         """
@@ -29,11 +25,9 @@ class NLIDataset(Dataset):
 
         :param data: NLI data containing `premise`, `hypothesis` and
             `label`.
-        :param vocab: vocabulary created from training data.
         :param transforms: composition of transformations.
         """
         self._data = data
-        self._vocab = vocab
         self._transforms = transforms
 
     @property
@@ -44,15 +38,6 @@ class NLIDataset(Dataset):
         :return: NLI data containing `premise`, `hypothesis` and `label`.
         """
         return self._data
-
-    @property
-    def vocab(self) -> Vocab:
-        """
-        Return property `vocab`.
-
-        :return: vocabulary created from training data.
-        """
-        return self._vocab
 
     @property
     def transforms(self) -> Optional[Compose]:

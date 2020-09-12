@@ -43,15 +43,19 @@ def train_fn(
     loop = tqdm(train_loader)
     for data in loop:
         # Send data to device
-        premise = data['premise'].to(device)
-        hypothesis = data['hypothesis'].to(device)
         label = data['label'].to(device)
+        inputs = data['inputs']
+        if isinstance(inputs, dict):
+            inputs['premise'] = inputs['premise'].to(device)
+            inputs['hypothesis'] = inputs['hypothesis'].to(device)
+        else:
+            inputs = inputs.to(device)
 
         # Reset all gradients
         optimizer.zero_grad()
 
         # Run forward pass
-        output = model(premise, hypothesis)
+        output = model(inputs)
 
         # Compute loss
         loss = criterion(output, label)

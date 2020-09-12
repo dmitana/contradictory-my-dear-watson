@@ -1,19 +1,19 @@
 from argparse import Namespace
+from functools import partial
 import logging
 
 import numpy as np
 import pandas as pd
 import torch
 from torch import nn, optim
-from torch.nn.utils.rnn import pack_sequence
 from torch.utils.data import DataLoader
-from torchsummaryX import summary
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from torchvision.transforms import Compose
+from transformers import AutoTokenizer
 
 from contradictory_my_dear_watson.datasets import NLIDataset
-from contradictory_my_dear_watson.models import BiLSTMModel
+from contradictory_my_dear_watson.models import BiLSTMModel, Transformer
 from contradictory_my_dear_watson.test import test_fn
 from contradictory_my_dear_watson.train import train_fn
 from contradictory_my_dear_watson.transforms import (
@@ -38,29 +38,50 @@ def train(args: Namespace) -> None:
     train_data = pd.read_csv(args.train_data_path)
     assert isinstance(train_data, pd.DataFrame)
 
-    # Get tokenizer and build vocabulary from train data
-    logger.info('Building vocabulary')
-    tokenizer = get_tokenizer(args.tokenizer, language=args.tokenizer_language)
-    tok_list = [
-        tokenizer(sentence) for sentence in
-        np.concatenate(
-            [train_data.premise.values, train_data.hypothesis.values]
+    if args.model != Transformer:
+        # Get tokenizer and build vocabulary from train data
+        logger.info('Building vocabulary')
+        tokenizer = get_tokenizer(
+            args.tokenizer,
+            language=args.tokenizer_language
         )
-    ]
+        tok_list = [
+            tokenizer(sentence) for sentence in
+            np.concatenate(
+                [train_data.premise.values, train_data.hypothesis.values]
+            )
+        ]
 
-    vocab = build_vocab_from_iterator(tok_list)
-    logger.info('Loading vectors')
-    vocab.load_vectors(args.vectors)
+        vocab = build_vocab_from_iterator(tok_list)
+        logger.info('Loading vectors')
+        vocab.load_vectors(args.vectors)
 
-    # Define transformations
-    transforms = Compose([
-        Tokenize(tokenizer, 'premise', 'hypothesis'),
-        ToVocabulary(vocab, 'premise', 'hypothesis'),
-        ToTensor(torch.long, 'premise', 'hypothesis', 'label')
-    ])
+        # Define transformations
+        transforms = Compose([
+            Tokenize(tokenizer, 'premise', 'hypothesis'),
+            ToVocabulary(vocab, 'premise', 'hypothesis'),
+            ToTensor(torch.long, 'premise', 'hypothesis', 'label')
+        ])
+
+        # Define collate_fn
+        collate_fn = batch_fn
+    else:
+        # Define transformations
+        transforms = Compose([ToTensor(torch.long, 'label')])
+
+        # Get tokenizer
+        transformer_tokenizer = AutoTokenizer.from_pretrained(
+            args.pretrained_transformer
+        )
+
+        # Define collate_fn
+        collate_fn = partial(
+            batch_fn,
+            transformer_tokenizer=transformer_tokenizer
+        )
 
     # Create train dataset
-    train_dataset = NLIDataset(train_data, vocab, transforms)
+    train_dataset = NLIDataset(train_data, transforms)
 
     # Create train data loader
     train_dataloader = DataLoader(
@@ -68,7 +89,7 @@ def train(args: Namespace) -> None:
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
-        collate_fn=batch_fn
+        collate_fn=collate_fn
     )
 
     # Load dev data
@@ -78,7 +99,7 @@ def train(args: Namespace) -> None:
         assert isinstance(dev_data, pd.DataFrame)
 
         # Create dev dataset
-        dev_dataset = NLIDataset(dev_data, vocab, transforms)
+        dev_dataset = NLIDataset(dev_data, transforms)
 
         # Create dev data loader
         dev_dataloader = DataLoader(
@@ -86,7 +107,7 @@ def train(args: Namespace) -> None:
             batch_size=args.batch_size,
             shuffle=False,
             num_workers=args.num_workers,
-            collate_fn=batch_fn
+            collate_fn=collate_fn
         )
     else:
         dev_dataloader = None
@@ -94,9 +115,14 @@ def train(args: Namespace) -> None:
     # Create model
     if args.model == BiLSTMModel:
         model = args.model(
-            embeddings=vocab.vectors,
+            embeddings=vocab.vectors,  # type: ignore
             lstm_hidden_size=args.lstm_hidden_size,
             max_pooling=args.max_pooling,
+            dropout_prob=args.dropout_prob
+        )
+    elif args.model == Transformer:
+        model = args.model(
+            pretrained_model_name_or_path=args.pretrained_transformer,
             dropout_prob=args.dropout_prob
         )
     else:
@@ -105,17 +131,7 @@ def train(args: Namespace) -> None:
         )
 
     if args.print_summary:
-        summary(
-            model,
-            pack_sequence(
-                torch.zeros(1, 20, dtype=torch.long),  # type: ignore
-                enforce_sorted=False
-            ),
-            pack_sequence(
-                torch.zeros(1, 20, dtype=torch.long),  # type: ignore
-                enforce_sorted=False
-            ),
-        )
+        model.summary()
 
     device = torch.device(
         'cuda:0' if torch.cuda.is_available() else 'cpu'  # type: ignore

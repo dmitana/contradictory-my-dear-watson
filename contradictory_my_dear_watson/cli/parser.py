@@ -9,7 +9,7 @@ from contradictory_my_dear_watson.datasets import (
     ContradictoryMyDearWatsonDataset,
     SNLI
 )
-from contradictory_my_dear_watson.models import BiLSTMModel
+from contradictory_my_dear_watson.models import BiLSTMModel, Transformer
 
 
 class MyArgumentParser(argparse.ArgumentParser):
@@ -149,6 +149,12 @@ def create_train_subparser(
         metavar=f'{{{",".join(key for key in model_mapping.keys())}}}',
         default='baseline',
         help='Model to be trained.'
+    )
+    parser_hparams.add_argument(
+        '--pretrained-transformer',
+        type=str,
+        default=None,
+        help='Model name or path of pretrained Transformer model.'
     )
     parser_hparams.add_argument(
         '--lstm-hidden-size',
@@ -313,7 +319,8 @@ logging_level_mapping = {
 }
 
 model_mapping = {
-    'baseline': BiLSTMModel
+    'baseline': BiLSTMModel,
+    'transformer': Transformer
 }
 
 dataset_mapping = {

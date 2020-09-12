@@ -1,8 +1,11 @@
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import torch
 from torch import nn, Tensor
-from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
+from torch.nn.utils.rnn import pack_sequence, PackedSequence, \
+    pad_packed_sequence
+from torchsummaryX import summary
+from transformers import AutoModel
 
 from contradictory_my_dear_watson.utils.model import \
     packed_sequence_element_wise_apply
@@ -11,9 +14,6 @@ from contradictory_my_dear_watson.utils.model import \
 class BiLSTMModel(nn.Module):
     """
     Base Bi-LSTM model.
-
-    To encode `premise` and `hypothesis` it concatenates forward and
-    backward directions of Bi-LSTM.
 
     :param self.embedding: torhc.nn.Embedding, pre-trained embedding
         layer.
@@ -83,19 +83,17 @@ class BiLSTMModel(nn.Module):
         self.fc = nn.Linear(8 * lstm_hidden_size, 512)
         self.fc_out = nn.Linear(512, num_classes)
 
-    def forward(
-        self,
-        premise: PackedSequence,
-        hypothesis: PackedSequence
-    ) -> Tensor:
+    def forward(self, inputs: Dict[str, PackedSequence]) -> Tensor:
         """
         Execute forward pass of the `BiLSTMModel`.
 
-        :param premise: input premise.
-        :param hypothesis: input hypothesis
+        :param inputs: model input. Dictionary with packed premise and
+            hypothesis.
         :return: final layer output. Classification without Softmax
             applied.
         """
+        premise, hypothesis = inputs['premise'], inputs['hypothesis']
+
         # Get embeddings
         premise_emb = packed_sequence_element_wise_apply(
             self.embedding,
@@ -161,6 +159,81 @@ class BiLSTMModel(nn.Module):
         # Classify using FC layers
         features = self.act(self.fc(features))
         features = self.dropout(features)
-        out = self.fc_out(features)
+        logits = self.fc_out(features)
+
+        return logits
+
+    def summary(self) -> None:
+        """Print model summary."""
+        summary(
+            self,
+            {
+                'premise': pack_sequence(
+                    torch.zeros(1, 20, dtype=torch.long),  # type: ignore
+                    enforce_sorted=False
+                ),
+                'hypothesis': pack_sequence(
+                    torch.zeros(1, 20, dtype=torch.long),  # type: ignore
+                    enforce_sorted=False
+                )
+            }
+        )
+
+
+class Transformer(nn.Module):
+    """
+    Model with Transformer architecture.
+
+    :param self.transformer: HuggingFace transformer model.
+    :param self.dropout: torch.nn.Dropout, dropout.
+    :param self.fc_out: torch.nn.Linear, final classification layer.
+    """
+
+    def __init__(
+        self,
+        pretrained_model_name_or_path: str,
+        dropout_prob: float = 0.5,
+        num_classes: int = 3
+    ):
+        """
+        Create a new instance of `Transformer`.
+
+        :param pretrained_model_name_or_path: model name or path of
+            pretrained Transformer model.
+        :param dropout_prob: probability of an element to be zeroed.
+        :param num_classes: number of classes to be predicted.
+        """
+        super(Transformer, self).__init__()
+
+        self.transformer = AutoModel.from_pretrained(
+            pretrained_model_name_or_path,
+            return_dict=True
+        )
+        self.dropout = nn.Dropout(p=dropout_prob)
+        self.fc_out = nn.Linear(
+            self.transformer.config.hidden_size,  # type: ignore
+            num_classes
+        )
+
+    def forward(self, inputs: Dict[str, List[Any]]) -> Tensor:
+        """
+        Execute forward pass of the `Transformer`.
+
+        :param inputs: transformer input. Dictionary with arguments for
+            transformer's forward method.
+        :return: final layer output. Classification without Softmax
+            applied.
+        """
+        outputs = self.transformer(**inputs)  # type: ignore
+        pooled_out = outputs.pooler_output  # CLS tokens
+        pooled_out = self.dropout(pooled_out)
+        out = self.fc_out(pooled_out)
 
         return out
+
+    def summary(self) -> None:
+        """Print model summary."""
+        summary(
+            self,
+            {'input_ids': torch.zeros(1, 20, dtype=torch.long)}  # type: ignore
+        )

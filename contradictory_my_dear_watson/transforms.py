@@ -175,8 +175,15 @@ class ToTensor():
         :param sample: dataset sample.
         :return: converted `sample`.
         """
-        return {
+        other_fields = set(sample.keys()).difference(self.fields)
+
+        result = {
             field: torch.tensor(
                 sample[field]
             ).to(dtype=self.dtype) for field in self.fields  # type: ignore
         }
+
+        for field in other_fields:
+            result[field] = sample[field]
+
+        return result

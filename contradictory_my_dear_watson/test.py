@@ -29,12 +29,11 @@ def test_fn(
     with torch.no_grad():
         for data in test_loader:
             # Send data to device
-            premise = data['premise'].to(device)
-            hypothesis = data['hypothesis'].to(device)
+            inputs = data['inputs'].to(device)
             label = data['label'].to(device)
 
             # Run forward pass
-            output = model(premise, hypothesis)
+            output = model(inputs)
 
             # Compute loss
             loss = criterion(output, label)
