@@ -1,6 +1,7 @@
 from argparse import Namespace
 from functools import partial
 import logging
+import os
 
 import numpy as np
 import pandas as pd
@@ -158,3 +159,15 @@ def train(args: Namespace) -> None:
         )
         if dev_dataloader is not None:
             test_fn(model, device, dev_dataloader, criterion)
+        if args.models_dir is not None:
+            os.makedirs(args.models_dir, exist_ok=True)
+            model_path = os.path.join(args.models_dir, f'model_{epoch:03}.pt')
+            logger.info(f'Saving model `{model_path}`')
+            torch.save(
+                {
+                    'epoch': epoch,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()
+                },
+                model_path
+            )

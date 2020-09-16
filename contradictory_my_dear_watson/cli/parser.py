@@ -117,6 +117,13 @@ def create_train_subparser(
         help='Path to the development dataset.'
     )
     parser_train.add_argument(
+        '--models-dir',
+        type=str,
+        default=None,
+        help='Path to the directory where models are saved each epoch. If '
+             '`None` models will not be saved.'
+    )
+    parser_train.add_argument(
         '--num-workers',
         type=int,
         default=0,
