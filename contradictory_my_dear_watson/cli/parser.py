@@ -7,6 +7,7 @@ from contradictory_my_dear_watson.cli.evaluate import evaluate
 from contradictory_my_dear_watson.cli.train import train
 from contradictory_my_dear_watson.datasets import (
     ContradictoryMyDearWatsonDataset,
+    ContradictoryMyDearWatsonMultilingualDataset,
     SNLI
 )
 from contradictory_my_dear_watson.models import BiLSTMModel, Transformer
@@ -325,5 +326,7 @@ model_mapping = {
 
 dataset_mapping = {
     'contradictory-my-dear-watson': ContradictoryMyDearWatsonDataset,
+    'contradictory-my-dear-watson-multilingual':
+        ContradictoryMyDearWatsonMultilingualDataset,
     'snli': SNLI
 }
