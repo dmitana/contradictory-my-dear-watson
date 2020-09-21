@@ -1,13 +1,16 @@
 import time
+from typing import Optional
 
 import torch
 from torch import nn
 from torch.nn.modules.loss import _Loss
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from contradictory_my_dear_watson.metrics import Accuracy, AvgLoss
+from contradictory_my_dear_watson.utils import logging
 
 
 def train_fn(
@@ -17,7 +20,8 @@ def train_fn(
     criterion: _Loss,
     optimizer: Optimizer,
     epoch: int,
-    epochs: int
+    epochs: int,
+    writer: Optional[SummaryWriter] = None
 ) -> None:
     """
     Train a given `model`.
@@ -29,6 +33,7 @@ def train_fn(
     :param optimizer: optimization algorithm.
     :param epoch: current epoch.
     :param epochs: total number of epochs.
+    :param writer: TensorBoard writer.
     """
     # Start timer
     start_time = time.time()
@@ -78,3 +83,8 @@ def train_fn(
             avg_acc=100. * acc.result,
             elapsed_time=f'{elapsed_time:.2f}s'
         )
+
+    # Log progress
+    if writer is not None:
+        scalars = {'loss': avg_loss.result, 'accuracy': 100. * acc.result}
+        logging.tensorboard_add_scalars(writer, 'train', scalars, epoch)

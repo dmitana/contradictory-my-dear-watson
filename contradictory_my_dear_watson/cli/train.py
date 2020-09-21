@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from torchvision.transforms import Compose
@@ -148,6 +149,8 @@ def train(args: Namespace) -> None:
     logger.info('Train eval loop')
     epochs = args.epochs
     for epoch in range(1, epochs + 1):
+        writer = None if args.logs_dir is None else \
+            SummaryWriter(args.logs_dir)
         train_fn(
             model,
             device,
@@ -155,10 +158,11 @@ def train(args: Namespace) -> None:
             criterion,
             optimizer,
             epoch,
-            epochs
+            epochs,
+            writer
         )
         if dev_dataloader is not None:
-            test_fn(model, device, dev_dataloader, criterion)
+            test_fn(model, device, dev_dataloader, criterion, epoch, writer)
         if args.models_dir is not None:
             os.makedirs(args.models_dir, exist_ok=True)
             model_path = os.path.join(args.models_dir, f'model_{epoch:03}.pt')

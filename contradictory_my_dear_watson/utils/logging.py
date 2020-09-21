@@ -1,5 +1,8 @@
 import logging
 import sys
+from typing import Dict
+
+from torch.utils.tensorboard.writer import SummaryWriter
 
 
 def initialize_logger(name: str, logging_level: int) -> None:
@@ -24,3 +27,21 @@ def initialize_logger(name: str, logging_level: int) -> None:
 
     # Add handlers to the logger
     logger.addHandler(ch)
+
+
+def tensorboard_add_scalars(
+    writer: SummaryWriter,
+    mode: str,
+    scalars: Dict[str, float],
+    global_step: int
+) -> None:
+    """
+    Add `scalars` to TensorBoard `writer`.
+
+    :param writer: TensorBoard writer.
+    :param mode: train/test/... mode.
+    :param scalars: dictionary of scalar name and value.
+    :param global_step: global step value to record.
+    """
+    for key, value in scalars.items():
+        writer.add_scalar(f'{key}/{mode}', value, global_step)

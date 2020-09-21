@@ -124,6 +124,13 @@ def create_train_subparser(
              '`None` models will not be saved.'
     )
     parser_train.add_argument(
+        '--logs-dir',
+        type=str,
+        default=None,
+        help='Path to the directory where TensorBoard logs are saved each '
+             'epoch. If `None` models will not be saved.'
+    )
+    parser_train.add_argument(
         '--num-workers',
         type=int,
         default=0,
