@@ -1,5 +1,5 @@
 import time
-from typing import Optional
+from typing import Dict, Optional
 
 import torch
 from torch import nn
@@ -22,7 +22,7 @@ def train_fn(
     epoch: int,
     epochs: int,
     writer: Optional[SummaryWriter] = None
-) -> None:
+) -> Dict[str, float]:
     """
     Train a given `model`.
 
@@ -34,6 +34,7 @@ def train_fn(
     :param epoch: current epoch.
     :param epochs: total number of epochs.
     :param writer: TensorBoard writer.
+    :return: key-value pairs of final average loss and accuracy.
     """
     # Start timer
     start_time = time.time()
@@ -84,7 +85,11 @@ def train_fn(
             elapsed_time=f'{elapsed_time:.2f}s'
         )
 
+    scalars = {'loss': avg_loss.result, 'accuracy': 100. * acc.result}
+
     # Log progress
     if writer is not None:
-        scalars = {'loss': avg_loss.result, 'accuracy': 100. * acc.result}
         logging.tensorboard_add_scalars(writer, 'train', scalars, epoch)
+        writer.add_hparams
+
+    return scalars

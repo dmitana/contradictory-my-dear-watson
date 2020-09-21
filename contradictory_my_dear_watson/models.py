@@ -15,7 +15,8 @@ class BiLSTMModel(nn.Module):
     """
     Base Bi-LSTM model.
 
-    :param self.embedding: torhc.nn.Embedding, pre-trained embedding
+    :param self.hparams: dict, key-value pairs of hyperparameters.
+    :param self.embedding: torch.nn.Embedding, pre-trained embedding
         layer.
     :param self.lstm: torch.nn.LSTM, Bi-LSTM layer.
     :param self.max_pooling: bool, whether max-pooling over LSTM's output
@@ -58,6 +59,16 @@ class BiLSTMModel(nn.Module):
         :param num_classes: number of classes to be predicted.
         """
         super(BiLSTMModel, self).__init__()
+
+        self.hparams = {
+            'num_embeddings': num_embbedings,
+            'embedding_dim': embedding_dim,
+            'freeze_embeddings': freeze_embeddings,
+            'lstm_hidden_size': lstm_hidden_size,
+            'max_pooling': max_pooling,
+            'dropout_prob': dropout_prob
+        }
+
         if embeddings is not None:
             self.embedding = nn.Embedding.from_pretrained(
                 embeddings=embeddings,
@@ -184,6 +195,7 @@ class Transformer(nn.Module):
     """
     Model with Transformer architecture.
 
+    :param self.hparams: dict, key-value pairs of hyperparameters.
     :param self.transformer: HuggingFace transformer model.
     :param self.dropout: torch.nn.Dropout, dropout.
     :param self.fc_out: torch.nn.Linear, final classification layer.
@@ -204,6 +216,11 @@ class Transformer(nn.Module):
         :param num_classes: number of classes to be predicted.
         """
         super(Transformer, self).__init__()
+
+        self.hparams = {
+            'pretrained_model_name_or_path': pretrained_model_name_or_path,
+            'dropout_prob': dropout_prob
+        }
 
         self.transformer = AutoModel.from_pretrained(
             pretrained_model_name_or_path,

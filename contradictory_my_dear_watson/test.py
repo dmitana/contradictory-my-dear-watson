@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict, Optional
 
 import torch
 from torch import nn
@@ -17,7 +17,7 @@ def test_fn(
     criterion: _Loss,
     epoch: int,
     writer: Optional[SummaryWriter] = None
-):
+) -> Dict[str, float]:
     """
     Evaluate a given `model`.
 
@@ -27,6 +27,7 @@ def test_fn(
     :param criterion: loss function.
     :param epoch: current epoch.
     :param writer: TensorBoard writer.
+    :return: key-value pairs of average loss and accuracy.
     """
     # Set eval mode
     model.eval()
@@ -56,14 +57,18 @@ def test_fn(
             avg_loss.update(loss.item())
 
     # Compute average accuracy and loss
-    acc_val = 100. * acc.compute().result
-    avg_loss_val = avg_loss.compute().result
+    scalars = {
+        'loss': avg_loss.compute().result,
+        'accuracy': 100. * acc.compute().result
+    }
 
     print(
-        f'Test set - avg loss: {avg_loss_val:.4f} - accuracy: {acc_val:.2f} %'
+        f'Test set - avg loss: {scalars["loss"]:.4f} - '
+        f'accuracy: {scalars["accuracy"]:.2f} %'
     )
 
     # Log evaluation
     if writer is not None:
-        scalars = {'loss': avg_loss_val, 'accuracy': acc_val}
         logging.tensorboard_add_scalars(writer, 'test', scalars, epoch)
+
+    return scalars

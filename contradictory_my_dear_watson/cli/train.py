@@ -35,6 +35,13 @@ def train(args: Namespace) -> None:
         NotImplementedError: when branch for given model is not
             implemented.
     """
+    # Define basic training hparams
+    hparams = {
+        'epochs': args.epochs,
+        'batch_size': args.batch_size,
+        'learning_rate': args.learning_rate
+    }
+
     # Load train data
     logger.info(f'Loading train data `{args.train_data_path}`')
     train_data = pd.read_csv(args.train_data_path)
@@ -122,6 +129,11 @@ def train(args: Namespace) -> None:
             max_pooling=args.max_pooling,
             dropout_prob=args.dropout_prob
         )
+        hparams.update({
+            'vectors': args.vectors,
+            'tokenizer': args.tokenizer,
+            'tokenizer_language': args.tokenizer_language
+        })
     elif args.model == Transformer:
         model = args.model(
             pretrained_model_name_or_path=args.pretrained_transformer,
@@ -148,10 +160,11 @@ def train(args: Namespace) -> None:
 
     logger.info('Train eval loop')
     epochs = args.epochs
+    best_train_metrics, best_test_metrics = {}, {}
+    best_train_acc, best_test_acc = -1., -1.
+    writer = None if args.logs_dir is None else SummaryWriter(args.logs_dir)
     for epoch in range(1, epochs + 1):
-        writer = None if args.logs_dir is None else \
-            SummaryWriter(args.logs_dir)
-        train_fn(
+        train_metrics = train_fn(
             model,
             device,
             train_dataloader,
@@ -161,8 +174,21 @@ def train(args: Namespace) -> None:
             epochs,
             writer
         )
+        if train_metrics['accuracy'] > best_train_acc:
+            best_train_acc = train_metrics['accuracy']
+            best_train_metrics = train_metrics
         if dev_dataloader is not None:
-            test_fn(model, device, dev_dataloader, criterion, epoch, writer)
+            test_metrics = test_fn(
+                model,
+                device,
+                dev_dataloader,
+                criterion,
+                epoch,
+                writer
+            )
+            if test_metrics['accuracy'] > best_test_acc:
+                best_test_acc = test_metrics['accuracy']
+                best_test_metrics = test_metrics
         if args.models_dir is not None:
             os.makedirs(args.models_dir, exist_ok=True)
             model_path = os.path.join(args.models_dir, f'model_{epoch:03}.pt')
@@ -175,3 +201,18 @@ def train(args: Namespace) -> None:
                 },
                 model_path
             )
+
+    # Write hyperparameters
+    if writer is not None:
+        best_train_metrics = {
+            'train_' + key: value for key, value in
+            best_train_metrics.items()
+        }
+        best_test_metrics = {
+            'test_' + key: value for key, value in
+            best_test_metrics.items()
+        }
+        writer.add_hparams(
+            {**hparams, **model.hparams},
+            {**best_train_metrics, **best_test_metrics}
+        )
