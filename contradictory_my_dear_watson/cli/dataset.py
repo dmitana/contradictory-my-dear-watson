@@ -12,5 +12,7 @@ def dataset(args: Namespace) -> None:
         args.train_size,
         args.dev_size,
         args.test_size,
-        args.sanity_size
+        args.sanity_size,
+        args.shuffle,
+        args.seed
     )()

@@ -328,6 +328,19 @@ def create_dataset_subparser(
              'with `--sanity-size` elements. Ignore `--train-size`, '
              '`--dev-size` and `--test-size` if set.'
     )
+    parser_dataset_specs.add_argument(
+        '--shuffle',
+        action='store_true',
+        help='Whether data should be shuffled before splitting into train, '
+             'dev and test datasets.'
+    )
+    parser_dataset_specs.add_argument(
+        '--seed',
+        type=int,
+        default=13,
+        help='Random seed used to create random permutation when `shuffle` '
+             'is `True`.'
+    )
 
     # Add execution function
     parser_dataset.set_defaults(func=dataset)

@@ -19,6 +19,10 @@ class Dataset(ABC):
     :param self.sanity_size: int, if greater than `0` then create dataset
         for sanity check with `--sanity-size` elements. Ignore
         `train_size`, `dev_size` and `test_size` if set.'
+    :param self.shuffle: bool, whether data should be shuffled before
+        splitting into train, dev and test datasets.
+    :param self.seed: int, random seed used to create random permutation
+        when `self.shuffle` is `True`.
     """
 
     label_map = {
@@ -34,6 +38,8 @@ class Dataset(ABC):
         dev_size: int,
         test_size: int,
         sanity_size: int = 0,
+        shuffle: bool = False,
+        seed: int = 13
     ):
         """
         Abstract constructor for `Dataset` sub-classes.
@@ -45,6 +51,10 @@ class Dataset(ABC):
         :param sanity_size: if greater than `0` then create dataset for
             sanity check with `--sanity-size` elements. Ignore
             `train_size`, `dev_size` and `test_size` if set.'
+        :param shuffle: whether data should be shuffled before splitting
+            into train, dev and test datasets.
+        :param seed: random seed used to create random permutation when
+            `shuffle` is `True`.
         :raise:
             ValueError: when wrong combination of values are assigned to
                 `train_size`, `dev_size`, `test_size` and `sanity_size`.
@@ -57,6 +67,8 @@ class Dataset(ABC):
         self._dev_size = dev_size
         self._test_size = test_size
         self._sanity_size = sanity_size
+        self._shuffle = shuffle
+        self._seed = seed
 
         if not self.check_datasets_sizes():
             raise ValueError(
@@ -109,6 +121,26 @@ class Dataset(ABC):
         :return: size of sanity check dataset in number of samples.
         """
         return self._sanity_size
+
+    @property
+    def shuffle(self) -> bool:
+        """
+        Return property `shuffle`.
+
+        :return: whether data should be shuffled before splitting into
+            train, dev and test datasets.
+        """
+        return self._shuffle
+
+    @property
+    def seed(self) -> int:
+        """
+        Return property `seed`.
+
+        :return: random seed used to create random permutation when
+            `self.shuffle` is `True`.
+        """
+        return self._seed
 
     @property
     def name(self) -> str:  # noqa: D102
@@ -186,13 +218,13 @@ class Dataset(ABC):
             assert isinstance(sanity_dataset, pd.DataFrame)
             datasets = {f'sanity_{self.sanity_size}': sanity_dataset}
         else:
-            # Get random permutation
             dataset_len = len(dataset)
-            np.random.seed(13)  # type: ignore
-            np.random.permutation(dataset_len)  # type: ignore
 
-            # TODO: fix not using random permutation
-            # TODO: add option to shuffle using random permutation
+            # Get random permutation
+            if self.shuffle:
+                np.random.seed(self.seed)  # type: ignore
+                perm = np.random.permutation(dataset_len)  # type: ignore
+                dataset = dataset.iloc[perm]
 
             # Compute lengths of dataset
             train_len = int(dataset_len * self.train_size / 100)
