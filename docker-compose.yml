@@ -11,6 +11,7 @@ services:
       - $HOME/.config/coc:/root/.coc
     ports:
       - 8000:8000
+      - 6006:6006
     device_requests:
       - capabilities:
         - "gpu"
