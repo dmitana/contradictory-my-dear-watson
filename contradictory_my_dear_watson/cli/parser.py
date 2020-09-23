@@ -153,69 +153,22 @@ def create_train_subparser(
         type=str,
         help='Path to the training dataset.'
     )
-
-    # Hyperparameters
-    parser_hparams = parser_train.add_argument_group(
-        'hyperparameters'
-    )
-    parser_hparams.add_argument(
+    parser_required_named.add_argument(
         '--model',
         type=arg_map(**model_mapping),
         metavar=f'{{{",".join(key for key in model_mapping.keys())}}}',
-        default='baseline',
         help='Model to be trained.'
     )
-    parser_hparams.add_argument(
-        '--pretrained-transformer',
-        type=str,
-        default=None,
-        help='Model name or path of pretrained Transformer model.'
-    )
-    parser_hparams.add_argument(
-        '--lstm-hidden-size',
-        type=int,
-        default=256,
-        help='Number of neurons in a LSTM layer.'
-    )
-    parser_hparams.add_argument(
-        '--max-pooling',
-        action='store_true',
-        help="whether max-pooling over LSTM's output is enabled or not. "
-             "If max-pooling is not enabled, only last LSTM's hidden "
-             'states are used.'
-    )
-    parser_hparams.add_argument(
-        '--dropout-prob',
-        type=float,
-        default=0.5,
-        help='Probability of an element to be zeroed.'
+
+    # Hyperparameters
+    parser_hparams = parser_train.add_argument_group(
+        'shared hyperparameters'
     )
     parser_hparams.add_argument(
         '--learning-rate',
         type=float,
         default=0.01,
         help='Learning rate.'
-    )
-    parser_hparams.add_argument(
-        '--tokenizer',
-        type=str,
-        default='spacy',
-        help='Tokenizer name to be used by PyTorch `get_tokenizer`'
-             'function to get instance of `Tokenizer`.'
-    )
-    parser_hparams.add_argument(
-        '--tokenizer-language',
-        type=str,
-        default='en_core_web_sm',
-        help='Tokenizer language to be used by PyTorch `get_tokenizer`'
-             'function to get instance of `Tokenizer`.'
-    )
-    parser_hparams.add_argument(
-        '--vectors',
-        type=str,
-        default='fasttext.simple.300d',
-        choices=['fasttext.simple.300d', 'fasttext.en.300d'],
-        help='Vectors name to be loaded by PyTorch `load_vectors` method.'
     )
     parser_hparams.add_argument(
         '--batch-size',
@@ -228,6 +181,62 @@ def create_train_subparser(
         type=int,
         default=1,
         help='Number of training epochs.'
+    )
+    parser_hparams.add_argument(
+        '--dropout-prob',
+        type=float,
+        default=0.5,
+        help='Probability of an element to be zeroed.'
+    )
+
+    # BiLSTM hyperparameters
+    parser_bilstm_hparams = parser_train.add_argument_group(
+        "BiLSTM model's hyperparameters"
+    )
+    parser_bilstm_hparams.add_argument(
+        '--lstm-hidden-size',
+        type=int,
+        default=256,
+        help='Number of neurons in a LSTM layer.'
+    )
+    parser_bilstm_hparams.add_argument(
+        '--max-pooling',
+        action='store_true',
+        help="whether max-pooling over LSTM's output is enabled or not. "
+             "If max-pooling is not enabled, only last LSTM's hidden "
+             'states are used.'
+    )
+    parser_bilstm_hparams.add_argument(
+        '--tokenizer',
+        type=str,
+        default='spacy',
+        help='Tokenizer name to be used by PyTorch `get_tokenizer`'
+             'function to get instance of `Tokenizer`.'
+    )
+    parser_bilstm_hparams.add_argument(
+        '--tokenizer-language',
+        type=str,
+        default='en_core_web_sm',
+        help='Tokenizer language to be used by PyTorch `get_tokenizer`'
+             'function to get instance of `Tokenizer`.'
+    )
+    parser_bilstm_hparams.add_argument(
+        '--vectors',
+        type=str,
+        default='fasttext.simple.300d',
+        choices=['fasttext.simple.300d', 'fasttext.en.300d'],
+        help='Vectors name to be loaded by PyTorch `load_vectors` method.'
+    )
+
+    # Transformer hyperparameters
+    parser_transformer_hparams = parser_train.add_argument_group(
+        "Transformer model's hyperparameters"
+    )
+    parser_transformer_hparams.add_argument(
+        '--pretrained-transformer',
+        type=str,
+        default=None,
+        help='Model name or path of pretrained Transformer model.'
     )
 
     # Add execution function
