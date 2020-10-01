@@ -77,6 +77,9 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help='Logging level.'
     )
 
+    # Create parent parser for train/eval arguments
+    parent_train_evaluate_parser = create_train_and_evaluate_parent_parser()
+
     # Subparsers
     subparsers = parser.add_subparsers(
         title='commands',
@@ -84,67 +87,70 @@ def create_argument_parser() -> argparse.ArgumentParser:
         description='use commands to perform various actions',
         help='additional help for commands'
     )
-    create_train_subparser(subparsers, [parent_parser])
-    create_evaluate_subparser(subparsers, [parent_parser])
+    create_train_subparser(
+        subparsers,
+        [parent_parser, parent_train_evaluate_parser]
+    )
+    create_evaluate_subparser(
+        subparsers,
+        [parent_parser, parent_train_evaluate_parser]
+    )
     create_dataset_subparser(subparsers, [parent_parser])
 
     return parser
 
 
-def create_train_subparser(
-    subparsers: argparse._SubParsersAction,
-    parents: Optional[List[argparse.ArgumentParser]] = None
-) -> None:
-    """
-    Create parser for the `train` command.
-
-    :param subparsers: argparse subparsers where a new parser will be
-        added.
-    :param parents: subparser parents.
-    """
-    parser_train = subparsers.add_parser(
-        'train',
-        parents=[] if parents is None else parents,
-        help='train a new model',
+def create_train_and_evaluate_parent_parser():
+    """Create parent parser for the `train` and `evaluate` command."""
+    parent_parser = argparse.ArgumentParser(
+        add_help=False,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     # Optional arguments
-    parser_train.add_argument(
-        '--dev-data-path',
+    parent_parser.add_argument(
+        '--test-data-path',
         type=str,
         default=None,
-        help='Path to the development dataset.'
+        help='Path to the development or test dataset in train or '
+             'evaluation mode, respectively.'
     )
-    parser_train.add_argument(
+    parent_parser.add_argument(
         '--models-dir',
         type=str,
         default=None,
         help='Path to the directory where models are saved each epoch. If '
-             '`None` models will not be saved.'
+             '`None` then models will not be saved.'
     )
-    parser_train.add_argument(
+    parent_parser.add_argument(
         '--logs-dir',
         type=str,
         default=None,
         help='Path to the directory where TensorBoard logs are saved each '
-             'epoch. If `None` models will not be saved.'
+             'epoch. If `None` then logs will not be saved.'
     )
-    parser_train.add_argument(
+    parent_parser.add_argument(
+        '--checkpoint-path',
+        type=str,
+        default=None,
+        help='Path to the model checkpoint to be evaluated or to continue '
+             'in a training from it.'
+    )
+    parent_parser.add_argument(
         '--num-workers',
         type=int,
         default=0,
         help='How many subprocesses to use for data loading. `0` means '
              'that the data will be loaded in the main process.'
     )
-    parser_train.add_argument(
+    parent_parser.add_argument(
         '--print-summary',
         action='store_true',
         help='Whether to print model summary.'
     )
 
     # Required named arguments
-    parser_required_named = parser_train.add_argument_group(
+    parser_required_named = parent_parser.add_argument_group(
         'required named arguments'
     )
     parser_required_named.add_argument(
@@ -161,7 +167,7 @@ def create_train_subparser(
     )
 
     # Hyperparameters
-    parser_hparams = parser_train.add_argument_group(
+    parser_hparams = parent_parser.add_argument_group(
         'shared hyperparameters'
     )
     parser_hparams.add_argument(
@@ -190,7 +196,7 @@ def create_train_subparser(
     )
 
     # BiLSTM hyperparameters
-    parser_bilstm_hparams = parser_train.add_argument_group(
+    parser_bilstm_hparams = parent_parser.add_argument_group(
         "BiLSTM model's hyperparameters"
     )
     parser_bilstm_hparams.add_argument(
@@ -229,7 +235,7 @@ def create_train_subparser(
     )
 
     # Transformer hyperparameters
-    parser_transformer_hparams = parser_train.add_argument_group(
+    parser_transformer_hparams = parent_parser.add_argument_group(
         "Transformer model's hyperparameters"
     )
     parser_transformer_hparams.add_argument(
@@ -237,6 +243,27 @@ def create_train_subparser(
         type=str,
         default=None,
         help='Model name or path of pretrained Transformer model.'
+    )
+
+    return parent_parser
+
+
+def create_train_subparser(
+    subparsers: argparse._SubParsersAction,
+    parents: Optional[List[argparse.ArgumentParser]] = None
+) -> None:
+    """
+    Create parser for the `train` command.
+
+    :param subparsers: argparse subparsers where a new parser will be
+        added.
+    :param parents: subparser parents.
+    """
+    parser_train = subparsers.add_parser(
+        'train',
+        parents=[] if parents is None else parents,
+        help='train a new model',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     # Add execution function
@@ -259,6 +286,8 @@ def create_evaluate_subparser(
         parents=[] if parents is None else parents,
         help='evaluate a given model'
     )
+
+    # Add execution function
     parser_evaluate.set_defaults(func=evaluate)
 
 
