@@ -31,7 +31,8 @@ $ docker-compose stop
 
 3. Download data:
 ```bash
-$ kaggle competitions download -c contradictory-my-dear-watson
+$ kaggle competitions download -c contradictory-my-dear-watson -p data/raw/contradictory-my-dear-watson
+$ unzip data/raw/contradictory-my-dear-watson/contradictory-my-dear-watson.zip -d data/raw/contradictory-my-dear-watson
 ```
 
 ## Training
